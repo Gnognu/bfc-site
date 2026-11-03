@@ -1,0 +1,1170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BFC League</title>
+<link rel="icon" href="logo96.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* Layout: sticky top nav, one view at a time (hash routes), 1160px column. Red corner / blue corner as the colour logic. */
+:root {
+  --bg: #060709;
+  --surface: #111319;
+  --raise: #181b23;
+  --line: #262a34;
+  --ink: #f1f3f6;
+  --muted: #959dab;
+  --red: #e3182d;
+  --blue: #2e6bff;
+  --silver: #c9ced6;
+  --win: #33c27f;
+  --loss: #ff5a67;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; min-height: 100%; }
+a { color: inherit; }
+a:focus-visible, button:focus-visible, select:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+img { max-width: 100%; }
+.wrap { max-width: 1160px; margin: 0 auto; padding: 0 20px; }
+h1, h2, h3 { font-family: var(--display); text-transform: uppercase; line-height: 1.02; margin: 0; letter-spacing: .01em; text-wrap: balance; }
+h1 { font-size: clamp(2.6rem, 6vw, 4.4rem); font-weight: 800; }
+h2 { font-size: 2rem; font-weight: 800; }
+h3 { font-size: 1.3rem; font-weight: 700; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--mono); }
+
+/* Nav */
+header.top { position: sticky; top: 0; z-index: 20; background: rgba(6,7,9,.9); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+header.top .wrap { display: flex; align-items: center; gap: 20px; height: 64px; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; font-family: var(--display); font-weight: 800; font-size: 1.35rem; letter-spacing: .04em; }
+.brand img { width: 44px; height: 44px;  }
+nav.links { display: flex; gap: 4px; margin-left: auto; }
+nav.links a { text-decoration: none; color: var(--muted); font-weight: 500; font-size: .93rem; padding: 8px 10px; border-radius: 6px; }
+nav.links a:hover { color: var(--ink); background: var(--surface); }
+nav.links a.on { color: var(--ink); box-shadow: inset 0 -2px 0 var(--red); border-radius: 0; }
+.menu-btn { display: none; margin-left: auto; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; font: inherit; font-weight: 600; cursor: pointer; }
+@media (max-width: 1240px) {
+  .menu-btn { display: block; }
+  nav.links { display: none; position: absolute; top: 64px; left: 0; right: 0; flex-direction: column; background: var(--bg); border-bottom: 1px solid var(--line); padding: 8px 20px 16px; }
+  nav.links.open { display: flex; }
+}
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 11px 18px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: .95rem; border: 1px solid var(--line); background: var(--surface); cursor: pointer; color: var(--ink); font-family: inherit; }
+.btn.red { background: var(--red); border-color: var(--red); color: #fff; }
+.btn.blue { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+.sample { background: #1a0d10; border-bottom: 1px solid #3a1820; color: #f3c4ca; font-size: .84rem; padding: 7px 0; }
+
+main { padding-bottom: 64px; }
+.view { display: none; }
+.view.on { display: block; }
+.page-head { padding: 44px 0 26px; display: flex; justify-content: space-between; align-items: end; gap: 16px; flex-wrap: wrap; }
+.page-head p { margin: 8px 0 0; color: var(--muted); max-width: 60ch; }
+.block { margin-top: 36px; }
+.block > h2 { margin-bottom: 16px; font-size: 1.6rem; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
+
+/* Home hero */
+.hero { display: grid; grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: center; padding: 40px 0 20px; }
+.hero-logo { width: min(400px, 100%); justify-self: center;  }
+.hero p.lead { color: var(--muted); font-size: 1.1rem; max-width: 52ch; margin: 18px 0 24px; }
+.hero .actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.hero h1 .r { color: var(--red); white-space: nowrap; }
+@media (max-width: 860px) { .hero { grid-template-columns: 1fr; } .hero-logo { width: 240px; order: -1; } }
+
+/* Countdown */
+.next { display: grid; grid-template-columns: 1fr auto; gap: 24px; align-items: center; padding: 24px; position: relative; overflow: hidden; }
+.next::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 4px; background: linear-gradient(var(--red) 50%, var(--blue) 50%); }
+.next .eyebrow { font-size: .75rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.next h3 { font-size: 2rem; margin: 4px 0; }
+.clock { display: flex; gap: 10px; }
+.clock div { background: var(--raise); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; min-width: 76px; text-align: center; }
+.clock b { display: block; font-family: var(--display); font-size: 2.3rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.clock small { font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+@media (max-width: 700px) { .next { grid-template-columns: 1fr; } .clock div { min-width: 0; flex: 1; padding: 8px; } .clock b { font-size: 1.8rem; } }
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 860px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+/* Bouts */
+.card-sec h4 { margin: 0; padding: 11px 20px; font-size: .74rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); background: var(--raise); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.card-sec:first-child h4 { border-top: 0; border-radius: 12px 12px 0 0; }
+.bout { display: grid; grid-template-columns: 1fr 150px 1fr; gap: 14px; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.card-sec:last-child .bout:last-child { border-bottom: 0; }
+.corner { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.corner.blue { flex-direction: row-reverse; text-align: right; }
+.corner .who { min-width: 0; }
+.corner .p { font-weight: 600; text-decoration: none; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.corner .p:hover { text-decoration: underline; }
+.corner .s { color: var(--muted); font-size: .84rem; }
+.corner.won .p::after { content: " W"; font-family: var(--mono); font-size: .72rem; color: var(--win); }
+.mid { text-align: center; }
+.mid .wc { font-weight: 600; font-size: .9rem; }
+.mid .rd { color: var(--muted); font-size: .8rem; }
+.mid .res { font-family: var(--mono); font-size: .8rem; color: var(--silver); }
+.tag { display: inline-block; font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; margin-bottom: 3px; }
+.tag.title { background: rgba(227,24,45,.16); color: #ff7180; border: 1px solid rgba(227,24,45,.4); }
+.tag.co { border: 1px solid var(--line); color: var(--muted); }
+@media (max-width: 640px) {
+  .bout { grid-template-columns: 1fr; gap: 8px; }
+  .corner.blue { flex-direction: row; text-align: left; }
+  .mid { text-align: left; order: -1; }
+}
+
+/* Avatar */
+.av { --c: var(--line); width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center; font-family: var(--display); font-weight: 700; font-size: 1rem; background: var(--raise); border: 2px solid var(--c); color: var(--silver); overflow: hidden; }
+.av img { width: 100%; height: 100%; object-fit: cover; }
+.av.red { --c: var(--red); }
+.av.blue { --c: var(--blue); }
+.av.lg { width: 96px; height: 96px; font-size: 2.2rem; border-width: 3px; }
+
+/* Form dots and streak */
+.form { display: inline-flex; gap: 4px; }
+.form i { width: 18px; height: 18px; border-radius: 4px; display: grid; place-items: center; font-style: normal; font-size: .62rem; font-weight: 700; font-family: var(--mono); color: #06120c; }
+.form i.W { background: var(--win); }
+.form i.L { background: var(--loss); color: #1a0508; }
+.streak { font-family: var(--mono); font-size: .8rem; padding: 2px 8px; border-radius: 6px; border: 1px solid var(--line); white-space: nowrap; }
+.streak.W { color: var(--win); border-color: rgba(51,194,127,.35); }
+.streak.L { color: var(--loss); border-color: rgba(255,90,103,.35); }
+
+/* Rankings */
+.tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+.tabs button { font: inherit; font-size: .9rem; font-weight: 500; padding: 7px 13px; border-radius: 99px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.rank-list { list-style: none; margin: 0; padding: 0; }
+.rank-list li { display: grid; grid-template-columns: 56px 1fr auto auto; gap: 14px; align-items: center; padding: 12px 20px; border-bottom: 1px solid var(--line); }
+.rank-list li:last-child { border-bottom: 0; }
+.rank-list .pos { font-family: var(--display); font-weight: 800; font-size: 1.5rem; color: var(--muted); }
+.rank-list li.champ { background: linear-gradient(90deg, rgba(227,24,45,.12), transparent 60%); }
+.rank-list li.champ .pos { color: var(--red); font-size: 1.1rem; letter-spacing: .06em; }
+.rank-list .who { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.rank-list .who a { font-weight: 600; text-decoration: none; }
+.rank-list .who a:hover { text-decoration: underline; }
+.rank-list .rec { font-family: var(--mono); font-size: .9rem; }
+@media (max-width: 640px) { .rank-list li { grid-template-columns: 40px 1fr auto; } .rank-list .form { display: none; } }
+
+/* Fighters grid */
+.toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+input[type=search], select { font: inherit; font-size: .95rem; padding: 9px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+input[type=search] { min-width: 220px; }
+.f-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.f-card { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; padding: 16px; text-decoration: none; transition: border-color .15s; }
+.f-card:hover { border-color: #3a4150; }
+.f-card .n { font-weight: 600; }
+.f-card .d { color: var(--muted); font-size: .84rem; }
+.f-card .r { font-family: var(--mono); font-size: .86rem; margin-top: 2px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.belt-chip { font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #ff7180; }
+
+/* Profile */
+.profile-top { display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center; padding: 24px; }
+.profile-top h1 { font-size: clamp(2rem, 5vw, 3.2rem); }
+.profile-top .chips { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+.chip { font-size: .8rem; padding: 3px 10px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.chip.red { border-color: rgba(227,24,45,.5); color: #ff7180; }
+.big-rec { text-align: right; }
+.big-rec b { font-family: var(--display); font-size: 3.4rem; line-height: 1; display: block; font-variant-numeric: tabular-nums; }
+@media (max-width: 700px) { .profile-top { grid-template-columns: 1fr; } .big-rec { text-align: left; } }
+.stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; margin-top: 16px; }
+.stat-row div { background: var(--surface); padding: 16px; }
+.stat-row b { display: block; font-family: var(--display); font-size: 1.9rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat-row small { color: var(--muted); font-size: .82rem; }
+@media (max-width: 640px) { .stat-row { grid-template-columns: 1fr 1fr; } }
+.methods { padding: 20px; display: grid; gap: 14px; }
+.mrow { display: grid; grid-template-columns: 110px 1fr 40px; gap: 12px; align-items: center; font-size: .9rem; }
+.mbar { height: 8px; background: var(--raise); border-radius: 4px; overflow: hidden; }
+.mbar i { display: block; height: 100%; background: var(--red); border-radius: 4px; }
+.mbar.loss i { background: var(--blue); }
+.hist { width: 100%; border-collapse: collapse; font-size: .93rem; min-width: 560px; }
+.hist th, .hist td { padding: 11px 16px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.hist th { font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.hist tr:last-child td { border-bottom: 0; }
+.hist a { text-decoration: none; font-weight: 500; }
+.hist a:hover { text-decoration: underline; }
+.res-W { color: var(--win); font-weight: 700; font-family: var(--mono); }
+.res-L { color: var(--loss); font-weight: 700; font-family: var(--mono); }
+.scroll { overflow-x: auto; }
+
+/* Events archive */
+.ev-list { display: grid; gap: 10px; }
+.ev-row { display: grid; grid-template-columns: 120px 1fr auto; gap: 18px; align-items: center; padding: 16px 20px; text-decoration: none; }
+.ev-row:hover { border-color: #3a4150; }
+.ev-row .nm { font-family: var(--display); font-size: 1.5rem; font-weight: 800; text-transform: uppercase; }
+.ev-row .hl { color: var(--muted); font-size: .9rem; }
+.ev-row .dt { color: var(--muted); font-size: .9rem; }
+@media (max-width: 640px) { .ev-row { grid-template-columns: 1fr; gap: 4px; } }
+.ev-head { padding: 22px 20px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: end; border-bottom: 1px solid var(--line); }
+.ev-head h2 { font-size: 2.2rem; }
+.ev-meta { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: .93rem; }
+.ev-meta strong { color: var(--ink); font-weight: 600; }
+.back { display: inline-block; margin-top: 28px; color: var(--muted); text-decoration: none; font-size: .9rem; }
+.back:hover { color: var(--ink); }
+
+/* Tale of the tape */
+.tape-pick { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: end; }
+.tape-pick label { display: block; font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; margin-bottom: 6px; }
+.tape-pick .lr { color: var(--red); }
+.tape-pick .lb { color: var(--blue); text-align: right; }
+.tape-pick select { width: 100%; }
+.tape-pick .vs { font-family: var(--display); font-weight: 800; font-style: italic; font-size: 2rem; color: var(--muted); padding-bottom: 2px; }
+.tape { margin-top: 18px; overflow: hidden; }
+.tape-heads { display: grid; grid-template-columns: 1fr 1fr; }
+.tape-heads > div { padding: 22px; display: flex; gap: 14px; align-items: center; }
+.tape-heads > div:first-child { background: linear-gradient(90deg, rgba(227,24,45,.22), transparent); }
+.tape-heads > div:last-child { background: linear-gradient(270deg, rgba(46,107,255,.22), transparent); flex-direction: row-reverse; text-align: right; }
+.tape-heads .nm { font-family: var(--display); font-size: 1.8rem; font-weight: 800; text-transform: uppercase; line-height: 1; }
+.tape-row { display: grid; grid-template-columns: 1fr 180px 1fr; align-items: center; border-top: 1px solid var(--line); }
+.tape-row > div { padding: 12px 22px; font-variant-numeric: tabular-nums; }
+.tape-row .l { text-align: right; font-family: var(--mono); }
+.tape-row .r { font-family: var(--mono); }
+.tape-row .k { text-align: center; font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.tape-row .best { color: var(--ink); font-weight: 700; }
+.tape-row .l.best { box-shadow: inset -3px 0 0 var(--red); }
+.tape-row .r.best { box-shadow: inset 3px 0 0 var(--blue); }
+.tape-row .dim { color: var(--muted); }
+.h2h { padding: 16px 22px; border-top: 1px solid var(--line); color: var(--muted); font-size: .92rem; }
+@media (max-width: 640px) {
+  .tape-pick { grid-template-columns: 1fr; } .tape-pick .vs { display: none; } .tape-pick .lb { text-align: left; }
+  .tape-row { grid-template-columns: 1fr 100px 1fr; } .tape-row > div { padding: 10px 10px; font-size: .88rem; }
+  .tape-heads > div { padding: 14px; } .tape-heads .nm { font-size: 1.2rem; } .tape-heads .av { display: none; }
+}
+
+/* Champions */
+.champs { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.champ { padding: 18px; display: grid; gap: 10px; position: relative; overflow: hidden; }
+.champ::after { content: ""; position: absolute; right: -30px; top: -30px; width: 90px; height: 90px; border: 2px solid rgba(227,24,45,.25); transform: rotate(22.5deg); }
+.champ .wc { font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.champ .who { display: flex; gap: 12px; align-items: center; }
+.champ .nm { font-family: var(--display); font-size: 1.6rem; font-weight: 800; text-transform: uppercase; line-height: 1; text-decoration: none; }
+.champ .nm:hover { text-decoration: underline; }
+.champ .meta { color: var(--muted); font-size: .86rem; }
+.lineage { padding: 0; }
+.lineage .lh { padding: 14px 20px; border-bottom: 1px solid var(--line); font-family: var(--display); font-weight: 700; font-size: 1.2rem; text-transform: uppercase; }
+.lineage ol { list-style: none; margin: 0; padding: 0; }
+.lineage li { display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; padding: 11px 20px; border-bottom: 1px solid var(--line); align-items: center; font-size: .92rem; }
+.lineage li:last-child { border-bottom: 0; }
+.lineage .no { font-family: var(--mono); color: var(--muted); font-size: .8rem; }
+.lineage a { text-decoration: none; font-weight: 600; }
+.lineage a:hover { text-decoration: underline; }
+.lineage .reign { color: var(--muted); font-size: .84rem; }
+.lineage .cur { color: #ff7180; font-size: .7rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin-left: 6px; }
+.def { font-family: var(--mono); font-size: .8rem; color: var(--silver); white-space: nowrap; }
+
+/* Staff */
+.staff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; }
+.staff { padding: 18px; display: flex; gap: 14px; align-items: center; }
+.staff .n { font-weight: 600; font-size: 1.05rem; }
+.staff .r { font-size: .78rem; letter-spacing: .1em; text-transform: uppercase; font-weight: 600; }
+.staff.own .r { color: var(--red); }
+.staff.adm .r { color: #7fa4ff; }
+.contact { padding: 24px; display: grid; grid-template-columns: 1fr auto; gap: 20px; align-items: center; }
+@media (max-width: 640px) { .contact { grid-template-columns: 1fr; } }
+.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; counter-reset: s; }
+.step { padding: 18px; }
+.step::before { counter-increment: s; content: counter(s); font-family: var(--display); font-weight: 800; font-size: 1.8rem; color: var(--red); display: block; line-height: 1; margin-bottom: 6px; }
+.step p { margin: 6px 0 0; color: var(--muted); font-size: .92rem; }
+@media (max-width: 860px) { .steps { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 520px) { .steps { grid-template-columns: 1fr; } }
+code { font-family: var(--mono); font-size: .85em; background: var(--raise); border: 1px solid var(--line); padding: 1px 6px; border-radius: 4px; }
+
+.mini-list { list-style: none; margin: 0; padding: 0; }
+.mini-list li { display: flex; justify-content: space-between; gap: 12px; align-items: center; padding: 11px 18px; border-bottom: 1px solid var(--line); font-size: .93rem; }
+.mini-list li:last-child { border-bottom: 0; }
+.mini-list a { text-decoration: none; font-weight: 600; }
+.mini-list a:hover { text-decoration: underline; }
+.panel-h { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; }
+.panel-h h3 { font-size: 1.15rem; }
+.panel-h a { font-size: .85rem; color: var(--muted); text-decoration: none; }
+.panel-h a:hover { color: var(--ink); }
+
+/* Bonuses, records, news, rules */
+.bonus { display: inline-block; font-size: .64rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; border-radius: 99px; border: 1px solid rgba(46,107,255,.5); color: #8fb0ff; margin-left: 6px; vertical-align: 1px; white-space: nowrap; }
+.chip.blue { border-color: rgba(46,107,255,.5); color: #8fb0ff; }
+.bonus-box { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--line); border-top: 1px solid var(--line); }
+.bonus-box > div { background: var(--surface); padding: 16px 20px; }
+.bonus-box .k { font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; color: #8fb0ff; font-weight: 600; }
+.bonus-box .v { font-weight: 600; margin-top: 4px; }
+@media (max-width: 640px) { .bonus-box { grid-template-columns: 1fr; } }
+.rec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.rec-tile { padding: 18px; display: grid; gap: 6px; }
+.rec-tile .k { font-size: .74rem; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.rec-tile b { font-family: var(--display); font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.rec-tile .who a { font-weight: 600; text-decoration: none; }
+.rec-tile .who a:hover { text-decoration: underline; }
+.rival { display: grid; grid-template-columns: 1fr 90px 1fr 170px; gap: 14px; align-items: center; padding: 14px 20px; border-bottom: 1px solid var(--line); }
+.rival:last-child { border-bottom: 0; }
+.rival .a { text-align: right; } .rival a { font-weight: 600; text-decoration: none; } .rival a:hover { text-decoration: underline; }
+.rival .sc { font-family: var(--display); font-weight: 800; font-size: 1.5rem; min-width: 70px; text-align: center; }
+.rival .n { color: var(--muted); font-size: .85rem; white-space: nowrap; text-align: right; }
+@media (max-width: 560px) { .rival { grid-template-columns: 1fr 70px 1fr; } .rival .n { grid-column: 1 / -1; text-align: center; } }
+.news-list { display: grid; gap: 12px; }
+.news { padding: 20px 22px; display: grid; gap: 6px; }
+.news .top { display: flex; gap: 10px; align-items: center; font-size: .8rem; color: var(--muted); }
+.news .kind { font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); }
+.news .kind.Title { color: #ff7180; border-color: rgba(227,24,45,.45); }
+.news .kind.Event { color: #8fb0ff; border-color: rgba(46,107,255,.45); }
+.news h3 { font-size: 1.45rem; }
+.news p { margin: 0; color: var(--muted); max-width: 70ch; }
+.su { padding: 6px 20px 16px; display: grid; gap: 10px; }
+.su-row { display: grid; grid-template-columns: 150px 1fr 40px 110px; gap: 12px; align-items: center; font-size: .9rem; }
+.su-row .mbar i { background: var(--blue); }
+.su-row .need { font-size: .68rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #ff7180; }
+@media (max-width: 560px) { .su-row { grid-template-columns: 110px 1fr 30px; } .su-row .need { grid-column: 1 / -1; margin-top: -6px; } }
+.next-fight { padding: 16px 20px; display: flex; justify-content: space-between; gap: 14px; align-items: center; flex-wrap: wrap; margin-top: 16px; border-color: rgba(46,107,255,.45); background: linear-gradient(90deg, rgba(46,107,255,.12), var(--surface) 60%); }
+.rules-list { list-style: none; margin: 0; padding: 0; counter-reset: r; }
+.rules-list li { display: grid; grid-template-columns: 48px 1fr; gap: 6px 14px; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+.rules-list li:last-child { border-bottom: 0; }
+.rules-list li::before { counter-increment: r; content: counter(r, decimal-leading-zero); font-family: var(--display); font-weight: 800; font-size: 1.6rem; color: var(--red); line-height: 1; grid-row: span 2; }
+.rules-list h3 { font-size: 1.2rem; }
+.rules-list p { margin: 0; color: var(--muted); max-width: 70ch; }
+.stream-steps { margin: 0; padding: 18px 22px 18px 44px; display: grid; gap: 8px; color: var(--muted); }
+.stream-steps strong { color: var(--ink); font-weight: 600; }
+.note { padding: 14px 22px; border-top: 1px solid var(--line); font-size: .92rem; color: var(--muted); }
+.note strong { color: var(--ink); }
+.toc { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 4px; }
+.toc a { font-size: .88rem; text-decoration: none; padding: 6px 12px; border: 1px solid var(--line); border-radius: 99px; color: var(--muted); background: var(--surface); }
+.toc a:hover { color: var(--ink); }
+
+footer { border-top: 1px solid var(--line); padding: 26px 0 36px; color: var(--muted); font-size: .86rem; }
+footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; align-items: center; }
+footer a { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+<style>
+.note-bar { background: #0d1320; border-bottom: 1px solid #1d2a44; color: #b9c8ea; font-size: .84rem; padding: 7px 0; }
+.ghost { color: var(--muted); }
+.av.ghost-av { opacity: .55; }
+.ser-tag { font-size: .66rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.ser-tag.APEX { color: #8fb0ff; border-color: rgba(46,107,255,.45); }
+.ser-tag.Fight { color: var(--silver); }
+.ser-tag.BFC { color: #ff7180; border-color: rgba(227,24,45,.45); }
+.ev-row .tags { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.opp-list { list-style: none; margin: 0; padding: 0; }
+.opp-list li { display: flex; gap: 12px; align-items: center; padding: 10px 18px; border-bottom: 1px solid var(--line); font-size: .92rem; }
+.opp-list li:last-child { border-bottom: 0; }
+.opp-list .ev { margin-left: auto; color: var(--muted); font-size: .84rem; white-space: nowrap; }
+.team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 12px; }
+.team .members { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 18px; }
+.team .members a { display: flex; align-items: center; gap: 8px; text-decoration: none; font-size: .88rem; padding: 4px 10px 4px 4px; border: 1px solid var(--line); border-radius: 99px; background: var(--raise); }
+.team .members a:hover { border-color: #3a4150; }
+.team .members .av { width: 26px; height: 26px; font-size: .7rem; border-width: 1px; }
+.empty { padding: 18px 20px; color: var(--muted); margin: 0; }
+.prov { font-size: .84rem; color: var(--muted); margin: -10px 0 16px; }
+.bout .bk { grid-column: 1 / -1; color: var(--muted); font-size: .82rem; margin-top: -4px; }
+.title-list li { grid-template-columns: 1fr auto; }
+.res-pill { display: inline-block; font-family: var(--mono); font-size: .72rem; font-weight: 700; padding: 2px 7px; border-radius: 5px; margin-left: 6px; vertical-align: 1px; }
+.res-pill.W { background: var(--win); color: #06120c; } .res-pill.L { background: var(--loss); color: #1a0508; } .res-pill.D, .res-pill.NC { background: var(--raise); color: var(--silver); border: 1px solid var(--line); }
+.corner.won .p::after { content: " W"; font-family: var(--mono); font-size: .72rem; color: var(--win); }
+.live-tag { display: inline-flex; align-items: center; gap: 6px; font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #fff; background: var(--red); padding: 3px 9px; border-radius: 99px; }
+.live-tag::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #fff; animation: blink 1.2s infinite; }
+@keyframes blink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .live-tag::before { animation: none; } }
+.fotm { display: grid; grid-template-columns: auto 1fr auto; gap: 18px; align-items: center; padding: 18px 22px; margin-top: 16px; border-color: rgba(201,206,214,.35); background: linear-gradient(90deg, rgba(201,206,214,.10), var(--surface) 55%); }
+.fotm .k { font-size: .72rem; letter-spacing: .14em; text-transform: uppercase; color: var(--silver); font-weight: 700; }
+.fotm .nm { font-family: var(--display); font-weight: 800; font-size: 1.7rem; text-transform: uppercase; line-height: 1.05; text-decoration: none; }
+@media (max-width: 600px) { .fotm { grid-template-columns: auto 1fr; } .fotm .btn { grid-column: 1 / -1; } }
+.fav { padding: 18px 22px; border-top: 1px solid var(--line); }
+.fav .lbl { display: flex; justify-content: space-between; font-size: .85rem; margin-bottom: 8px; }
+.fav .lbl b { font-family: var(--display); font-size: 1.4rem; }
+.fav .track { display: flex; height: 12px; border-radius: 6px; overflow: hidden; background: var(--raise); }
+.fav .track i:first-child { background: var(--red); } .fav .track i:last-child { background: var(--blue); }
+.fav small { display: block; color: var(--muted); font-size: .78rem; margin-top: 8px; }
+.tape-sec { text-align: center; font-size: .7rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 700; padding: 10px; background: var(--raise); border-top: 1px solid var(--line); }
+.common { border-top: 1px solid var(--line); }
+.common .row { display: grid; grid-template-columns: 1fr 200px 1fr; align-items: center; border-top: 1px solid var(--line); }
+.common .row:first-child { border-top: 0; }
+.common .row > div { padding: 10px 22px; font-size: .9rem; }
+.common .row .l { text-align: right; } .common .row .k { text-align: center; }
+@media (max-width: 640px) { .common .row { grid-template-columns: 1fr 110px 1fr; } .common .row > div { padding: 8px 10px; font-size: .84rem; } }
+.form.lg i { width: 22px; height: 22px; font-size: .7rem; }
+/* Side smoke: fixed behind the content, blue on the left, red on the right */
+#smoke { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none; filter: blur(1.5px) saturate(1.15); }
+.note-bar, main, footer { position: relative; z-index: 1; }
+/* Hero logo: float, red glow, light sweep masked to the logo shape, mouse tilt */
+.hero-logo-wrap { width: min(400px, 100%); justify-self: center; aspect-ratio: 1; perspective: 900px; animation: logo-float 6s ease-in-out infinite; }
+.hero-logo-wrap .tilt { position: relative; width: 100%; height: 100%; transition: transform .25s ease-out; transform-style: preserve-3d; }
+.hero-logo-wrap .hero-logo { width: 100%; height: 100%; display: block; animation: logo-glow 3.2s ease-in-out infinite; }
+.hero-logo-wrap .shine { position: absolute; filter: brightness(1.2); inset: 0; pointer-events: none; mix-blend-mode: screen;
+  -webkit-mask: url(logo480.png) center / contain no-repeat; mask: url(logo480.png) center / contain no-repeat;
+  background: linear-gradient(110deg, transparent 0 40%, rgba(255,255,255,.25) 45%, rgba(255,255,255,1) 49%, rgba(255,255,255,1) 51%, rgba(255,235,235,.25) 55%, transparent 60% 100%);
+  background-size: 300% 100%; background-repeat: no-repeat; animation: logo-sweep 4.2s cubic-bezier(.45,.05,.35,1) infinite; }
+.hero-logo-wrap .shine.s2 { background: linear-gradient(110deg, transparent 0 47%, rgba(255,120,130,.55) 50%, transparent 53% 100%); background-size: 300% 100%; animation-delay: .18s; opacity: .8; }
+@keyframes logo-sweep { 0% { background-position: 100% 0; } 45%, 100% { background-position: 0% 0; } }
+@keyframes logo-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+@keyframes logo-glow { 0%, 100% { filter: drop-shadow(0 0 12px rgba(227,24,45,.25)) drop-shadow(0 10px 30px rgba(0,0,0,.6)); }
+  50% { filter: drop-shadow(0 0 34px rgba(227,24,45,.6)) drop-shadow(0 10px 30px rgba(0,0,0,.6)); } }
+@media (max-width: 860px) { .hero-logo-wrap { width: 240px; order: -1; } }
+@media (prefers-reduced-motion: reduce) { .hero-logo-wrap, .hero-logo-wrap .hero-logo, .hero-logo-wrap .shine { animation: none; } .hero-logo-wrap .shine { display: none; } }
+</style>
+</head>
+<body>
+
+<canvas id="smoke" aria-hidden="true"></canvas>
+
+<div class="note-bar"><div class="wrap">Live data from the BFC Discord, updated <span id="exp-date"></span>. Records come from each player's server nickname.</div></div>
+
+<header class="top">
+  <div class="wrap">
+    <a class="brand" href="#home"><img src="logo96.png" alt="" width="44" height="44">BFC</a>
+    <button class="menu-btn" type="button" id="menu-btn" aria-expanded="false" aria-controls="nav">Menu</button>
+    <nav class="links" id="nav" aria-label="Main">
+      <a href="#home" data-v="home">Home</a>
+      <a href="#events" data-v="events">Events</a>
+      <a href="#rankings" data-v="rankings">Rankings</a>
+      <a href="#fighters" data-v="fighters">Fighters</a>
+      <a href="#tape" data-v="tape">Tale of the tape</a>
+      <a href="#champions" data-v="champions">Champions</a>
+      <a href="#records" data-v="records">Records</a>
+      <a href="#teams" data-v="teams">Teams</a>
+      <a href="#news" data-v="news">News</a>
+      <a href="#rules" data-v="rules">Rules</a>
+      <a href="#staff" data-v="staff">Staff</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- HOME -->
+  <div class="view wrap" id="v-home">
+    <div class="hero">
+      <div>
+        <h1>Fight nights for <span class="r">UFC 6</span> players</h1>
+        <p class="lead">BFC runs full fight cards on Discord: numbered BFC events, midweek APEX cards and Fight Nights. Sign up, get booked in your division and fight your way to a title shot.</p>
+        <div class="actions">
+          <a class="btn red" href="https://discord.gg/D7PXvJWE8N">Join the Discord</a>
+          <a class="btn" href="https://www.twitch.tv/bfcleague">Watch on Twitch</a>
+        </div>
+      </div>
+      <div class="hero-logo-wrap"><div class="tilt" id="logo-tilt"><img class="hero-logo" src="logo480.png" alt="BFC 6 logo" width="400" height="400"><span class="shine" aria-hidden="true"></span><span class="shine s2" aria-hidden="true"></span></div></div>
+    </div>
+    <div class="panel next" id="home-next"></div>
+    <div id="home-live"></div>
+    <div id="home-fotm"></div>
+    <div class="grid-3 block">
+      <div class="panel"><div class="panel-h"><h3>Champions</h3><a href="#champions">All titles</a></div><ul class="mini-list" id="home-champs"></ul></div>
+      <div class="panel"><div class="panel-h"><h3 id="home-last-h">Latest card</h3><a href="#events">All events</a></div><ul class="mini-list" id="home-last"></ul></div>
+      <div class="panel"><div class="panel-h"><h3>Most wins</h3><a href="#records">Records</a></div><ol class="mini-list" id="home-wins"></ol></div>
+    </div>
+    <div class="block">
+      <h2>How to fight in BFC</h2>
+      <div class="steps">
+        <div class="panel step"><h3>Set your nickname</h3><p>Fighters and record, like <code>Fighter A / Fighter B 4-1</code>.</p></div>
+        <div class="panel step"><h3>Get a division role</h3><p>Pick your weight classes. You can only be booked in those.</p></div>
+        <div class="panel step"><h3>Press Sign up</h3><p>On the card post. You get a confirmation and a DM.</p></div>
+        <div class="panel step"><h3>Accept your fight</h3><p>Offers arrive by DM. Accept within 24 hours or it expires.</p></div>
+      </div>
+      <p class="muted" style="margin-top:14px">Before fighting, read the <a href="#rules">league rules</a> and the Twitch streaming guide.</p>
+    </div>
+  </div>
+
+  <!-- EVENTS -->
+  <div class="view wrap" id="v-events">
+    <div class="page-head"><div><h1>Events</h1><p>The next event, the latest card and every card posted in the BFC Discord.</p></div></div>
+    <div class="panel next" id="ev-next"></div>
+    <div class="block"><h2 id="latest-h">Latest card</h2><div class="panel" id="ev-latest"></div></div>
+    <div class="block">
+      <h2>Past cards</h2>
+      <div class="tabs" id="ser-tabs" role="group" aria-label="Series"></div>
+      <div class="ev-list" id="ev-archive"></div>
+    </div>
+  </div>
+
+  <div class="view wrap" id="v-event">
+    <a class="back" href="#events">← All events</a>
+    <div class="panel block" id="ev-detail" style="margin-top:16px"></div>
+  </div>
+
+  <!-- RANKINGS -->
+  <div class="view wrap" id="v-rankings">
+    <div class="page-head"><div><h1>Rankings</h1><p>Champion on top, then contenders in each division.</p></div></div>
+    <p class="prov" id="rank-note"></p>
+    <div class="tabs" id="rank-tabs" role="group" aria-label="Division"></div>
+    <div class="panel"><ol class="rank-list" id="rank-list"></ol></div>
+  </div>
+
+  <!-- FIGHTERS -->
+  <div class="view wrap" id="v-fighters">
+    <div class="page-head">
+      <div><h1>Fighters</h1><p id="f-count"></p></div>
+      <div class="toolbar">
+        <label for="f-search" style="position:absolute;left:-9999px">Search players</label>
+        <input type="search" id="f-search" placeholder="Search name or fighter">
+        <label for="f-div" style="position:absolute;left:-9999px">Division</label>
+        <select id="f-div"><option value="all">All divisions</option></select>
+        <label for="f-sort" style="position:absolute;left:-9999px">Sort</label>
+        <select id="f-sort"><option value="wins">Most wins</option><option value="name">Name A–Z</option><option value="cards">Most BFC bouts</option></select>
+      </div>
+    </div>
+    <div class="f-grid" id="f-grid"></div>
+  </div>
+
+  <div class="view wrap" id="v-profile">
+    <a class="back" href="#fighters">← All fighters</a>
+    <div id="profile" style="margin-top:16px"></div>
+  </div>
+
+  <!-- TAPE -->
+  <div class="view wrap" id="v-tape">
+    <div class="page-head"><div><h1>Tale of the tape</h1><p>Pick two players to compare them side by side.</p></div></div>
+    <div class="tape-pick">
+      <div><label for="t-a" class="lr">Red corner</label><select id="t-a"></select></div>
+      <div class="vs">VS</div>
+      <div><label for="t-b" class="lb">Blue corner</label><select id="t-b"></select></div>
+    </div>
+    <div class="panel tape" id="tape"></div>
+  </div>
+
+  <!-- CHAMPIONS -->
+  <div class="view wrap" id="v-champions">
+    <div class="page-head"><div><h1>Champions</h1><p>Current title holders, former champions and every championship bout on a BFC card.</p></div></div>
+    <div class="champs" id="champs"></div>
+    <div class="block"><h2>Former champions</h2><div class="panel team"><div class="members" id="formers"></div></div></div>
+    <div class="block"><h2>Title fights</h2><div class="grid-2" id="title-fights"></div></div>
+  </div>
+
+  <!-- RECORDS -->
+  <div class="view wrap" id="v-records">
+    <div class="page-head"><div><h1>League records</h1><p>All-time BFC bests from player records and every posted card.</p></div></div>
+    <div class="rec-grid" id="rec-grid"></div>
+    <div class="block"><h2>Rivalries</h2><p class="muted" style="margin:-8px 0 16px">Players booked against each other most often.</p><div class="panel" id="rivals"></div></div>
+  </div>
+
+  <!-- TEAMS -->
+  <div class="view wrap" id="v-teams">
+    <div class="page-head"><div><h1>Teams</h1><p>The active BFC teams. A team has 1 owner and up to 8 members.</p></div></div>
+    <div class="team-grid" id="teams"></div>
+  </div>
+
+  <!-- NEWS -->
+  <div class="view wrap" id="v-news">
+    <div class="page-head"><div><h1>News</h1><p>Every card announcement from the BFC Discord, newest first.</p></div></div>
+    <div class="news-list" id="news-list"></div>
+  </div>
+
+  <!-- RULES -->
+  <div class="view wrap" id="v-rules">
+    <div class="page-head"><div><h1>Rules</h1><p>Every BFC fighter agrees to these rules. Staff can warn, remove or ban players who break them.</p></div></div>
+    <nav class="toc" aria-label="Rules sections"><a href="#rules" data-jump="r-league">League rules</a><a href="#rules" data-jump="r-fighters">Fighter changes</a><a href="#rules" data-jump="r-stream">Streaming on fight night</a><a href="#rules" data-jump="r-teams">Teams</a></nav>
+    <div class="block" id="r-league"><h2>League rules</h2>
+      <ol class="panel rules-list">
+        <li><h3>Respect all fighters and staff</h3><p>Toxic behavior, harassment or hate speech leads to warnings or bans. This especially includes comments about family members.</p></li>
+        <li><h3>No rage quitting</h3><p>Quitting mid-fight without valid proof of a disconnect counts as a loss.</p></li>
+        <li><h3>No glitches or exploits</h3><p>Repeatedly using broken mechanics, stamina glitches or cheese tactics can lead to disqualification.</p></li>
+        <li><h3>Record important fights</h3><p>Title fights and main events must be recorded, so there is proof if a dispute happens.</p></li>
+        <li><h3>Stay active</h3><p>If you are inactive for 7 days or more without telling staff, you may be removed from the rankings or replaced on the card.</p></li>
+        <li><h3>Follow matchmaking</h3><p>Do not duck fights or refuse opponents without a valid reason.</p></li>
+        <li><h3>Staff decisions are final</h3><p>Admins and moderators have the final say in disputes and rulings.</p></li>
+        <li><h3>Have fun and keep it competitive</h3><p>BFC is a competitive league and a community. Keep it fair and enjoyable for everyone.</p></li>
+      </ol>
+    </div>
+    <div class="block" id="r-fighters"><h2>Fighter changes</h2>
+      <div class="panel" style="padding:18px 22px"><p style="margin:0">You must have <strong>3 fights</strong> on a fighter before you can change to a different fighter.</p></div>
+    </div>
+    <div class="block" id="r-stream"><h2>Streaming on fight night</h2>
+      <div class="panel">
+        <div class="panel-h"><h3>How the Twitch streaming works</h3><a href="https://www.twitch.tv/bfcleague">twitch.tv/bfcleague</a></div>
+        <p style="margin:0;padding:16px 22px 0" class="muted">Every fighter needs to connect their PlayStation account to Twitch before the event, so you can stream your fight straight from your PlayStation.</p>
+        <ol class="stream-steps">
+          <li><strong>Link your PS account to Twitch</strong> in your PlayStation settings.</li>
+          <li>When your fight is coming up, <strong>join the lobby</strong> and get ready.</li>
+          <li>When the previous fight ends and it is your turn, <strong>start a Twitch broadcast</strong> from your PlayStation.</li>
+          <li>Once your stream is live, <strong>copy your Twitch stream link</strong>.</li>
+          <li>Post the link in the <strong>#streams</strong> channel on Discord.</li>
+        </ol>
+        <div class="note">The fight starts once staff can see the streams and both links are posted. If you can't stream on Twitch, <strong>YouTube</strong> works too.</div>
+        <div class="note"><strong>Be in the lobby and ready before your scheduled fight time.</strong> It saves everyone from waiting and keeps the event running smoothly.</div>
+      </div>
+    </div>
+    <div class="block" id="r-teams"><h2>Teams</h2>
+      <div class="panel" style="padding:18px 22px"><p style="margin:0">A team has <strong>1 owner and up to 8 members</strong>.</p></div>
+    </div>
+  </div>
+
+  <!-- STAFF -->
+  <div class="view wrap" id="v-staff">
+    <div class="page-head"><div><h1>Staff &amp; contacts</h1><p>The team that books the cards, records the results and keeps the league running.</p></div></div>
+    <div class="block" style="margin-top:0"><h2>Owners</h2><div class="staff-grid" id="owners"></div></div>
+    <div class="block"><h2>Admins</h2><div class="staff-grid" id="admins"></div></div>
+    <div class="panel contact block">
+      <div><h3>Need help or want to fight?</h3><p class="muted" style="margin:6px 0 0">Join the BFC Discord and message any staff member. Fight offers, signups and results all happen there, and every event is streamed on Twitch.</p></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btn red" href="https://discord.gg/D7PXvJWE8N">Join the Discord</a><a class="btn blue" href="https://www.twitch.tv/bfcleague">Twitch</a></div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>BFC, a community league for the UFC 6 video game. Not affiliated with the UFC or EA Sports.</span>
+    <span style="display:flex;gap:18px;flex-wrap:wrap"><a href="https://discord.gg/D7PXvJWE8N">Discord</a><a href="https://www.twitch.tv/bfcleague">twitch.tv/bfcleague</a></span>
+  </div>
+</footer>
+
+<script>
+/* Logo tilts slightly toward the mouse */
+(function () {
+  const t = document.getElementById("logo-tilt"); if (!t || matchMedia("(prefers-reduced-motion: reduce)").matches || matchMedia("(hover: none)").matches) return;
+  addEventListener("mousemove", e => {
+    const r = t.getBoundingClientRect(); if (!r.width) return;
+    const dx = (e.clientX - (r.left + r.width / 2)) / innerWidth, dy = (e.clientY - (r.top + r.height / 2)) / innerHeight;
+    t.style.transform = `rotateY(${dx * 22}deg) rotateX(${-dy * 18}deg)`;
+  });
+  document.addEventListener("mouseleave", () => { t.style.transform = ""; });
+})();
+</script>
+<script>
+/* Colour smoke bombs on the sides: textured smoke puffs that billow up from the bottom corners */
+(function () {
+  const c = document.getElementById("smoke"); if (!c || !c.getContext) return;
+  const ctx = c.getContext("2d"), reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const mobile = () => innerWidth < 700;
+  let W = 0, H = 0, S = 1, parts = [];
+
+  // One noisy, clumpy smoke puff, then tinted copies (dark core, mid, bright edge) for each colour.
+  function puff(tint, seed) {
+    const n = 160, cv = document.createElement("canvas"); cv.width = cv.height = n;
+    const g = cv.getContext("2d");
+    let r = seed; const rnd = () => (r = (r * 9301 + 49297) % 233280) / 233280;
+    for (let i = 0; i < 260; i++) {
+      const ang = rnd() * Math.PI * 2, dist = Math.pow(rnd(), 0.7) * n * 0.36, rad = 6 + rnd() * 22;
+      const x = n / 2 + Math.cos(ang) * dist, y = n / 2 + Math.sin(ang) * dist;
+      const gr = g.createRadialGradient(x, y, 0, x, y, rad);
+      gr.addColorStop(0, `rgba(255,255,255,${0.10 + rnd() * 0.16})`); gr.addColorStop(1, "rgba(255,255,255,0)");
+      g.fillStyle = gr; g.beginPath(); g.arc(x, y, rad, 0, Math.PI * 2); g.fill();
+    }
+    g.globalCompositeOperation = "destination-in";
+    const mask = g.createRadialGradient(n / 2, n / 2, n * 0.08, n / 2, n / 2, n / 2);
+    mask.addColorStop(0, "rgba(0,0,0,1)"); mask.addColorStop(0.65, "rgba(0,0,0,.85)"); mask.addColorStop(1, "rgba(0,0,0,0)");
+    g.fillStyle = mask; g.fillRect(0, 0, n, n);
+    g.globalCompositeOperation = "source-atop"; g.fillStyle = tint; g.fillRect(0, 0, n, n);
+    return cv;
+  }
+  const TINTS = { "-1": ["#0b2a8c", "#1f5cff", "#5f8dff", "#9fbcff"], "1": ["#7a0610", "#e3182d", "#ff4a57", "#ff8f98"] };
+  const SPR = {};
+  for (const side of ["-1", "1"]) SPR[side] = TINTS[side].flatMap((t, i) => [puff(t, 11 + i * 7), puff(t, 97 + i * 13)]);
+
+  function size() { S = mobile() ? 0.6 : 0.75; W = c.width = Math.ceil(innerWidth * S); H = c.height = Math.ceil(innerHeight * S); }
+  function make(side, anywhere) {
+    const band = W * (mobile() ? 0.09 : 0.13);
+    const base = side < 0 ? -band * 0.3 + Math.random() * band : W + band * 0.3 - Math.random() * band;
+    const life = anywhere ? Math.random() : 0;
+    const max = 520 + Math.random() * 420;
+    const p = {
+      side, x: base, y: H + 40 + Math.random() * 60, vx: (0.25 + Math.random() * 0.6) * -side * (Math.random() < 0.7 ? 1 : -0.4),
+      vy: -(1.6 + Math.random() * 1.4) * (H / 700), size: (40 + Math.random() * 50) * Math.max(0.8, H / 800),
+      grow: 0.18 + Math.random() * 0.22, rot: Math.random() * Math.PI * 2, spin: (Math.random() - 0.5) * 0.006,
+      spr: (Math.random() * 8) | 0, life: 0, max, seed: Math.random() * 1000, alpha: 0.55 + Math.random() * 0.35,
+    };
+    if (anywhere) for (let i = 0, n = life * max; i < n; i++) advance(p);
+    return p;
+  }
+  function advance(p) {
+    p.life++;
+    p.vy *= 0.9965; p.vx *= 0.996;                       // rising plume slows down
+    p.x += p.vx + Math.sin((p.life + p.seed) * 0.012) * 0.25 * -p.side;
+    p.y += p.vy - 0.12;
+    p.size += p.grow; p.rot += p.spin;
+  }
+  function init() { size(); const n = mobile() ? 34 : 58; parts = []; for (let i = 0; i < n; i++) parts.push(make(-1, true), make(1, true)); }
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "source-over";
+    parts.sort((a, b) => a.spr - b.spr);
+    for (let i = 0; i < parts.length; i++) {
+      const p = parts[i];
+      advance(p);
+      if (p.life > p.max || p.y + p.size < -40) { parts[i] = make(p.side, false); continue; }
+      const t = p.life / p.max, fade = Math.min(1, t * 6) * Math.pow(1 - t, 1.3);
+      ctx.globalAlpha = fade * p.alpha * (mobile() ? 0.55 : 0.75);
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.drawImage(SPR[p.side][p.spr], -p.size / 2, -p.size / 2, p.size, p.size);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function loop() { if (!document.hidden) draw(); requestAnimationFrame(loop); }
+  init();
+  addEventListener("resize", () => { const oldW = W; size(); if (Math.abs(W - oldW) > 30) init(); });
+  if (reduce) draw(); else requestAnimationFrame(loop);
+})();
+</script>
+<script>
+const DIVISIONS = ["Flyweight","Bantamweight","Featherweight","Lightweight","Welterweight","Middleweight","Light Heavyweight","Heavyweight"];
+const SECTIONS = ["Main Event","Co-Main Event","Main Card","Prelims","Early Prelims","Unaired Fights"];
+const MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const METHOD = { KO: "KO/TKO", SUB: "Submission", DEC: "Decision" };
+const AWARDS = [["FOTN", "Fight of the Night"], ["KOTN", "Knockout of the Night"], ["SOTN", "Submission of the Night"], ["POTN", "Performance of the Night"]];
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+const fmtDate = d => { const [y, m, dd] = d.slice(0, 10).split("-").map(Number); return `${dd} ${MON[m - 1]} ${y}`; };
+const monthName = ym => { const [y, m] = ym.split("-").map(Number); return ["January","February","March","April","May","June","July","August","September","October","November","December"][m - 1] + " " + y; };
+let B, PL, EV, RES, posted, latest;
+
+/* ================= DATA ================= */
+function prepare(data) {
+  B = data;
+  B.results = B.results || []; B.bonuses = B.bonuses || []; B.fotm = B.fotm || []; B.rankings = B.rankings || {};
+  PL = Object.fromEntries(B.players.map(p => [p.id, p]));
+  EV = Object.fromEntries(B.events.map(e => [e.id, e]));
+  RES = {};
+  for (const r of B.results) RES[`${r.ev}|${r.red}|${r.blue}`] = r;
+  for (const p of B.players) Object.assign(p, { bouts: [], main: 0, titles: 0, titleWins: 0, five: 0, rw: 0, rl: 0, rd: 0, bon: { FOTN: 0, KOTN: 0, SOTN: 0, POTN: 0 }, bonTotal: 0, fotmN: 0 });
+  for (const e of B.events) for (const b of e.bouts) {
+    const [sec, red, blue, div, rounds, title, bmf] = b;
+    const r = RES[`${e.id}|${red}|${blue}`];
+    for (const [me, opp, corner] of [[red, blue, "red"], [blue, red, "blue"]]) {
+      const p = PL[me]; if (!p) continue;
+      let res = null;
+      if (r) res = r.o === "draw" ? "D" : r.o === "nc" ? "NC" : (r.o === corner ? "W" : "L");
+      p.bouts.push({ ev: e.id, date: e.date, opp, div, rounds, sec, title, bmf, corner, res, m: r && r.m, rnd: r && r.r });
+      if (sec === "Main Event") p.main++;
+      if (title) p.titles++;
+      if (rounds === 5) p.five++;
+      if (res === "W") { p.rw++; if (title) p.titleWins++; } else if (res === "L") p.rl++; else if (res === "D") p.rd++;
+    }
+  }
+  for (const b of B.bonuses) { const p = PL[b.id]; if (p) { p.bon[b.kind] = (p.bon[b.kind] || 0) + 1; p.bonTotal++; } }
+  for (const f of B.fotm) { const p = PL[f.id]; if (p) p.fotmN++; }
+  for (const p of B.players) {
+    p.total = p.w + p.l + p.d; p.rate = p.total ? Math.round(p.w / p.total * 100) : 0;
+    p.bouts.sort((a, b) => b.date.localeCompare(a.date));
+    const done = p.bouts.filter(b => b.res === "W" || b.res === "L");
+    p.form = done.slice(0, 5).map(b => b.res);
+    let n = 0; for (const b of done) { if (b.res === done[0].res) n++; else break; }
+    p.streak = done.length ? { t: done[0].res, n } : null;
+    p.lastWin = p.bouts.find(b => b.res === "W") || null;
+    p.lastFight = p.bouts.find(b => b.date <= today()) || null;
+    const tw = p.t.ko + p.t.sub + p.t.dec, tl = p.t.lko + p.t.lsub + p.t.ldec;
+    p.finishRate = tw ? Math.round((p.t.ko + p.t.sub) / tw * 100) : null;
+    p.finishedRate = tl ? Math.round((p.t.lko + p.t.lsub) / tl * 100) : null;
+  }
+  posted = B.events.slice().sort((a, b) => b.date.localeCompare(a.date));
+  latest = posted[0];
+}
+const today = () => new Date().toISOString().slice(0, 10);
+const nameOf = id => id ? (PL[id] ? PL[id].name : (B.ghosts[id] || "Former fighter")) : "TBD";
+const pid = id => "p-" + id;
+const rec = p => `${p.w}-${p.l}${p.d ? "-" + p.d : ""}`;
+const initials = n => (n || "?").replace(/[^A-Za-z0-9 ]/g, "").split(" ").filter(Boolean).slice(0, 2).map(w => w[0]).join("").toUpperCase() || "?";
+function av(id, cls = "") {
+  const p = PL[id];
+  if (!p) return `<span class="av ghost-av ${cls}">${esc(initials(nameOf(id)))}</span>`;
+  return `<span class="av ${cls}">${p.av ? `<img src="${esc(p.av)}" alt="" loading="lazy" onerror="this.remove()">` : ""}${p.av ? "" : esc(initials(p.name))}</span>`;
+}
+const link = id => PL[id] ? `<a href="#${pid(id)}">${esc(PL[id].name)}</a>` : `<span class="ghost">${esc(nameOf(id))}</span>`;
+const champOf = d => B.champs[d] && PL[B.champs[d]];
+const divLabel = (div, bmf) => div || (bmf ? "BMF" : "Open weight");
+const formHtml = (p, cls = "") => p.form.length ? `<span class="form ${cls}" aria-label="Last ${p.form.length}: ${p.form.join(", ")}">${p.form.map(r => `<i class="${r}">${r}</i>`).join("")}</span>` : `<span class="muted" style="font-size:.84rem">No results yet</span>`;
+const streakTxt = p => p.streak ? `${p.streak.t}${p.streak.n}` : "–";
+const isLive = e => e.date === today();
+function rankOf(p) {
+  if (p.champDiv) return { txt: `${p.champDiv} champion`, n: 0 };
+  for (const d of p.divs) { const list = B.rankings[d] || []; const i = list.indexOf(p.id); if (i >= 0) return { txt: `#${i + 1} ${d}`, n: i + 1 }; }
+  return { txt: "Unranked", n: 99 };
+}
+const p4pOf = p => { const i = (B.rankings.P4P || []).indexOf(p.id); return i >= 0 ? i + 1 : null; };
+const daysAgo = d => { const n = Math.round((Date.now() - new Date(d + "T12:00:00Z")) / 864e5); return n <= 0 ? "today" : n === 1 ? "yesterday" : `${n} days ago`; };
+const bonusesFor = ev => B.bonuses.filter(b => b.ev === ev);
+
+/* ================= CARDS ================= */
+function titleTag(title, bmf, sec) {
+  if (title) return `<span class="tag title">${bmf ? "BMF title" : "Title fight"}</span><br>`;
+  if (bmf) return `<span class="tag title">BMF</span><br>`;
+  if (sec === "Main Event") return `<span class="tag co">Main event</span><br>`;
+  if (sec === "Co-Main Event") return `<span class="tag co">Co-main</span><br>`;
+  return "";
+}
+function boutRow(e, b) {
+  const [sec, red, blue, div, rounds, title, bmf, backup] = b;
+  const r = RES[`${e.id}|${red}|${blue}`];
+  const side = (id, cls) => {
+    const p = PL[id];
+    const sub = p ? `${esc(p.divs.join(", "))} · <span class="mono">${rec(p)}</span>` : id ? "Left the server" : "Opponent to be announced";
+    const won = r && r.o === cls;
+    return `<div class="corner ${cls} ${won ? "won" : ""}">${av(id, cls)}<div class="who">${p ? `<a class="p" href="#${pid(id)}">${esc(p.name)}</a>` : `<span class="p ghost">${esc(nameOf(id))}</span>`}<div class="s">${sub}</div></div></div>`;
+  };
+  const resTxt = r ? (r.o === "draw" ? "Draw" : r.o === "nc" ? "No contest" : `${esc(nameOf(r.o === "red" ? red : blue))} wins · ${METHOD[r.m] || ""}${r.r ? " R" + r.r : ""}`) : "";
+  return `<div class="bout">${side(red, "red")}<div class="mid">${titleTag(title, bmf, sec)}<div class="wc">${esc(divLabel(div, bmf))}</div><div class="rd">${rounds} rounds</div>${resTxt ? `<div class="res">${resTxt}</div>` : ""}</div>${side(blue, "blue")}${backup ? `<div class="bk">Backup fighter: ${link(backup)}</div>` : ""}</div>`;
+}
+const cardHtml = e => SECTIONS.map(s => { const r = e.bouts.filter(b => b[0] === s); return r.length ? `<div class="card-sec"><h4>${s}</h4>${r.map(b => boutRow(e, b)).join("")}</div>` : ""; }).join("");
+function evHead(e, label) {
+  const done = e.bouts.filter(b => RES[`${e.id}|${b[1]}|${b[2]}`]).length;
+  return `<div class="ev-head"><div>${isLive(e) ? `<span class="live-tag">Live · results updating</span>` : label ? `<div class="muted" style="font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;font-weight:600">${label}</div>` : ""}
+    <h2>${esc(e.name)}${e.loc && !e.name.toUpperCase().includes(e.loc.toUpperCase()) ? ": " + esc(e.loc) : ""}</h2></div>
+    <div class="ev-meta"><span><strong>Date</strong> ${fmtDate(e.date)}</span><span><strong>Time</strong> ${esc(e.time)}</span><span><strong>Bouts</strong> ${e.bouts.length}</span><span><strong>Results</strong> ${done}/${e.bouts.length}</span></div></div>`;
+}
+function bonusBox(e) {
+  const bs = bonusesFor(e.id); if (!bs.length) return "";
+  return `<div class="bonus-box">${AWARDS.filter(([k]) => bs.some(b => b.kind === k)).map(([k, label]) => `<div><div class="k">${label}</div><div class="v">${bs.filter(b => b.kind === k).map(b => link(b.id)).join(k === "FOTN" ? " vs " : ", ")}</div></div>`).join("")}</div>`;
+}
+
+/* ================= HOME ================= */
+function nextPanel() {
+  const n = B.next;
+  if (!n) return `<div><div class="eyebrow">Next event</div><h3>Coming soon</h3><div class="muted">The next card is announced in the BFC Discord.</div><div style="margin-top:14px"><a class="btn red" href="https://discord.gg/D7PXvJWE8N">Join the Discord</a></div></div><div></div>`;
+  const posted = B.events.find(e => e.name === n.name);
+  return `<div><div class="eyebrow">Next event${n.loc ? " · " + esc(n.loc) : ""}</div><h3>${esc(n.name)}</h3>
+    <div class="muted">${new Date(n.start).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · ${esc(n.timeLabel)} · ${posted ? "The card is out." : "Signups are open, the card is announced in Discord soon."}</div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap">${posted ? `<a class="btn red" href="#${posted.id}">View the card</a>` : `<a class="btn red" href="https://discord.gg/D7PXvJWE8N">Sign up in Discord</a>`}<a class="btn" href="https://www.twitch.tv/bfcleague">Live on Twitch</a></div></div>
+    <div class="clock" data-clock></div>`;
+}
+function fotmPanel() {
+  const f = B.fotm[0]; if (!f || !PL[f.id]) return "";
+  return `<div class="panel fotm">${av(f.id, "lg")}<div><div class="k">Fighter of the Month · ${monthName(f.month)}</div><a class="nm" href="#${pid(f.id)}">${esc(PL[f.id].name)}</a>${f.note ? `<div class="muted" style="margin-top:4px">${esc(f.note)}</div>` : ""}</div><a class="btn" href="#${pid(f.id)}">View profile</a></div>`;
+}
+function renderHome() {
+  document.getElementById("home-next").innerHTML = nextPanel();
+  const live = B.events.find(isLive);
+  document.getElementById("home-live").innerHTML = live ? `<a class="panel next-fight" href="#${live.id}" style="text-decoration:none;display:flex"><span><span class="live-tag">Live</span>&nbsp; <strong>${esc(live.name)}</strong> is on tonight. Results appear here as staff record them.</span><span class="btn blue">Follow live</span></a>` : "";
+  document.getElementById("home-fotm").innerHTML = fotmPanel();
+  document.getElementById("home-champs").innerHTML = DIVISIONS.map(d => { const c = champOf(d); return `<li><span class="muted">${d}</span>${c ? link(c.id) : '<span class="muted">Vacant</span>'}</li>`; }).join("");
+  document.getElementById("home-last-h").textContent = latest.name;
+  document.getElementById("home-last").innerHTML = latest.bouts.slice(0, 6).map(b => { const r = RES[`${latest.id}|${b[1]}|${b[2]}`];
+    return `<li><span>${link(b[1])} <span class="muted">vs</span> ${link(b[2])}</span><span class="mono muted" style="white-space:nowrap">${r ? (r.o === "draw" ? "Draw" : r.o === "nc" ? "NC" : (r.m || "") + (r.r ? " R" + r.r : "")) : b[5] ? "Title" : b[4] + " rds"}</span></li>`; }).join("");
+  const p4p = B.rankings.P4P && B.rankings.P4P.length ? B.rankings.P4P.map(id => PL[id]).filter(Boolean) : null;
+  const winsHead = document.querySelector("#home-wins").previousElementSibling;
+  winsHead.querySelector("h3").textContent = p4p ? "Pound for pound" : "Most wins";
+  winsHead.querySelector("a").href = p4p ? "#rankings" : "#records";
+  winsHead.querySelector("a").textContent = p4p ? "Rankings" : "Records";
+  document.getElementById("home-wins").innerHTML = (p4p || B.players.slice().sort((a, b) => b.w - a.w || a.l - b.l)).slice(0, 6).map((p, i) => `<li><span><span class="mono muted">${i + 1}</span>&nbsp;&nbsp;${link(p.id)}</span><span class="mono muted">${rec(p)}</span></li>`).join("");
+}
+function tick() {
+  document.querySelectorAll("[data-clock]").forEach(el => {
+    if (!B.next) return;
+    let s = Math.max(0, Math.floor((new Date(B.next.start) - Date.now()) / 1000));
+    if (s === 0) { el.innerHTML = `<a class="btn red" href="https://www.twitch.tv/bfcleague" style="font-size:1.1rem;padding:16px 24px">● Live now on Twitch</a>`; return; }
+    const d = Math.floor(s / 86400); s %= 86400; const h = Math.floor(s / 3600); s %= 3600; const m = Math.floor(s / 60); s %= 60;
+    el.innerHTML = [[d,"Days"],[h,"Hours"],[m,"Min"],[s,"Sec"]].map(([v,l]) => `<div><b>${String(v).padStart(2,"0")}</b><small>${l}</small></div>`).join("");
+  });
+}
+
+/* ================= EVENTS ================= */
+let serFilter = "All";
+function renderEvents() {
+  document.getElementById("ev-next").innerHTML = nextPanel();
+  const upcoming = latest.date >= today();
+  document.getElementById("latest-h").textContent = upcoming ? "Current card" : "Latest card";
+  document.getElementById("ev-latest").innerHTML = evHead(latest, upcoming ? "Upcoming" : "Most recent") + cardHtml(latest) + bonusBox(latest);
+  document.getElementById("ser-tabs").innerHTML = ["All", "BFC", "APEX", "Fight Night"].map(s => `<button type="button" data-s="${s}" aria-pressed="${s === serFilter}">${s === "BFC" ? "BFC numbered" : s}</button>`).join("");
+  document.querySelectorAll("#ser-tabs button").forEach(b => b.onclick = () => { serFilter = b.dataset.s; renderEvents(); });
+  document.getElementById("ev-archive").innerHTML = posted.filter(e => e !== latest && (serFilter === "All" || e.series === serFilter)).map(e => {
+    const m = e.bouts[0], r = RES[`${e.id}|${m[1]}|${m[2]}`];
+    const head = r && (r.o === "red" || r.o === "blue") ? `${esc(nameOf(r.o === "red" ? m[1] : m[2]))} def. ${esc(nameOf(r.o === "red" ? m[2] : m[1]))} <span class="muted">· ${METHOD[r.m] || ""}${r.r ? " R" + r.r : ""}</span>` : `${esc(nameOf(m[1]))} vs ${esc(nameOf(m[2]))} <span class="muted">· ${esc(divLabel(m[3], m[6]))}${m[5] ? " title" : ""}</span>`;
+    return `<a class="panel ev-row" href="#${e.id}"><div class="nm">${esc(e.name.replace("BFC FIGHT NIGHT", "BFC FN"))}</div>
+      <div><div>${head}</div><div class="hl">${e.loc ? esc(e.loc) + " · " : ""}${e.bouts.length} bouts</div></div>
+      <div class="tags"><span class="ser-tag ${e.series.split(" ")[0]}">${esc(e.series)}</span><span class="dt">${fmtDate(e.date)}</span></div></a>`;
+  }).join("");
+}
+function renderEvent(id) { const e = EV[id]; document.getElementById("ev-detail").innerHTML = evHead(e, e.series) + cardHtml(e) + bonusBox(e); }
+
+/* ================= RANKINGS ================= */
+let rankDiv = "Lightweight";
+const byRecord = (a, b) => b.w - a.w || b.rate - a.rate || a.l - b.l || a.name.localeCompare(b.name);
+function renderRankings() {
+  const tabs = [...DIVISIONS, "P4P"];
+  document.getElementById("rank-tabs").innerHTML = tabs.map(t => `<button type="button" data-t="${t}" aria-pressed="${t === rankDiv}">${t === "P4P" ? "Pound for pound" : t}</button>`).join("");
+  document.querySelectorAll("#rank-tabs button").forEach(b => b.onclick = () => { rankDiv = b.dataset.t; renderRankings(); });
+  const official = (B.rankings[rankDiv] || []).map(id => PL[id]).filter(Boolean);
+  document.getElementById("rank-note").textContent = official.length ? "Official rankings set by the BFC staff." : "Provisional order by record until the staff publishes the official rankings.";
+  let items;
+  if (rankDiv === "P4P") items = (official.length ? official : B.players.filter(p => p.total >= 3).sort(byRecord).slice(0, 15)).map((p, i) => ({ p, pos: i + 1 }));
+  else {
+    const c = champOf(rankDiv);
+    const rest = official.length ? official.filter(p => p !== c) : B.players.filter(p => p.divs.includes(rankDiv) && p !== c && p.total > 0).sort(byRecord).slice(0, 15);
+    items = (c ? [{ p: c, pos: "C" }] : []).concat(rest.map((p, i) => ({ p, pos: i + 1 })));
+  }
+  document.getElementById("rank-list").innerHTML = items.map(({ p, pos }) => `<li class="${pos === "C" ? "champ" : ""}"><span class="pos">${pos === "C" ? "CHAMP" : pos}</span>
+    <span class="who">${av(p.id)}<span><a href="#${pid(p.id)}">${esc(p.name)}</a><br><span class="muted" style="font-size:.84rem">${rankDiv === "P4P" ? esc(p.divs.join(", ")) + (p.champDiv ? " · " + esc(p.champDiv) + " champion" : "") : (p.streak ? "Streak " + streakTxt(p) + " · " : "") + p.bouts.length + " BFC bouts"}</span></span></span>
+    ${formHtml(p)}<span class="rec">${rec(p)}</span></li>`).join("") || `<li><span></span><span class="muted">No ranked players yet.</span></li>`;
+}
+
+/* ================= FIGHTERS ================= */
+function renderFighters() {
+  const q = document.getElementById("f-search").value.trim().toLowerCase(), d = document.getElementById("f-div").value, so = document.getElementById("f-sort").value;
+  const sorters = { wins: byRecord, name: (a, b) => a.name.localeCompare(b.name), cards: (a, b) => b.bouts.length - a.bouts.length || byRecord(a, b) };
+  const list = B.players.filter(p => (d === "all" || p.divs.includes(d)) && (!q || (p.name + " " + (p.user || "")).toLowerCase().includes(q))).sort(sorters[so]);
+  document.getElementById("f-count").textContent = `${B.players.length} players in the BFC Discord with a division role.`;
+  document.getElementById("f-grid").innerHTML = list.map(p => `
+    <a class="panel f-card" href="#${pid(p.id)}">${av(p.id, p.champDiv ? "red" : "")}
+      <div style="min-width:0"><div class="n">${esc(p.name)}</div><div class="d">${esc(p.divs.join(", "))}${p.champDiv ? ` · <span class="belt-chip">Champion</span>` : ""}</div>
+      <div class="r">${rec(p)}${p.streak ? ` <span class="streak ${p.streak.t}">${streakTxt(p)}</span>` : ""}${p.teams[0] ? ` <span class="muted" style="font-family:var(--body);font-size:.8rem">${esc(p.teams[0])}</span>` : ""}</div></div></a>`).join("") || `<p class="muted">No players match that search.</p>`;
+}
+
+/* ================= PROFILE ================= */
+const bar = (label, v, tot, cls = "") => `<div class="mrow"><span>${label}</span><div class="mbar ${cls}"><i style="width:${tot ? v / tot * 100 : 0}%"></i></div><span class="mono">${v}</span></div>`;
+const resPill = b => b.res ? `<span class="res-pill ${b.res}">${b.res}</span>` : "";
+function renderProfile(id) {
+  const p = PL[id], rk = rankOf(p), p4 = p4pOf(p);
+  const fm = B.fotm.filter(f => f.id === id);
+  const chips = [...p.divs.map(d => `<span class="chip">${esc(d)}</span>`),
+    p.champDiv ? `<span class="chip red">${esc(p.champDiv)} champion</span>` : rk.n < 99 ? `<span class="chip">${esc(rk.txt)}</span>` : "",
+    p4 ? `<span class="chip">#${p4} P4P</span>` : "", p.former ? `<span class="chip">Former champion</span>` : "",
+    ...p.teams.map(t => `<a class="chip blue" href="#teams" style="text-decoration:none">${esc(t)}</a>`), p.staff ? `<span class="chip red">${esc(p.staff)}</span>` : "",
+    ...AWARDS.filter(([k]) => p.bon[k]).map(([k, label]) => `<span class="chip blue">${p.bon[k]}× ${label}</span>`),
+    ...fm.map(f => `<span class="chip">Fighter of the Month ${esc(monthName(f.month))}</span>`),
+    ...p.tags.map(t => `<span class="chip">${esc(t)}</span>`)].join("");
+  const tw = p.t.ko + p.t.sub + p.t.dec, tl = p.t.lko + p.t.lsub + p.t.ldec;
+  const tracked = p.tc ? `<div class="grid-2 block">
+      <div class="panel"><div class="panel-h"><h3>Wins by method</h3></div><div class="methods">${bar("KO/TKO", p.t.ko, tw)}${bar("Submission", p.t.sub, tw)}${bar("Decision", p.t.dec, tw)}</div></div>
+      <div class="panel"><div class="panel-h"><h3>Losses by method</h3></div><div class="methods">${bar("KO/TKO", p.t.lko, tl, "loss")}${bar("Submission", p.t.lsub, tl, "loss")}${bar("Decision", p.t.ldec, tl, "loss")}</div></div>
+    </div><p class="muted" style="font-size:.84rem;margin:8px 0 0">From the ${p.tc} results the staff recorded in the bot.</p>` : "";
+  const next = B.events.filter(e => e.date >= today()).flatMap(e => e.bouts.filter(b => (b[1] === id || b[2] === id) && !RES[`${e.id}|${b[1]}|${b[2]}`]).map(b => ({ e, b })))[0];
+  document.getElementById("profile").innerHTML = `
+    <div class="panel profile-top">${av(id, "lg " + (p.champDiv ? "red" : ""))}
+      <div><h1>${esc(p.name)}</h1>${p.user ? `<div class="muted">@${esc(p.user)}</div>` : ""}<div class="chips">${chips}</div>
+      ${p.fighters.length > 1 ? `<div class="muted" style="margin-top:10px">Fighters: <span style="color:var(--ink)">${esc(p.fighters.join(", "))}</span></div>` : ""}</div>
+      <div class="big-rec"><b>${rec(p)}</b><span class="muted">W-L${p.d ? "-D" : ""}</span><div style="margin-top:8px">${p.form.length ? formHtml(p) : ""}</div></div>
+    </div>
+    ${next ? (() => { const opp = next.b[1] === id ? next.b[2] : next.b[1]; return `<div class="panel next-fight"><div><div class="muted" style="font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;font-weight:600">Next fight · ${esc(next.e.name)} · ${fmtDate(next.e.date)}</div>
+      <div style="font-weight:600;font-size:1.1rem;margin-top:2px">vs ${link(opp)} <span class="muted" style="font-weight:400">· ${esc(divLabel(next.b[3], next.b[6]))} · ${next.b[4]} rounds${next.b[5] ? " · title fight" : ""}</span></div></div>
+      ${PL[opp] ? `<a class="btn blue" href="#tape" data-tape-a="${id}" data-tape-b="${opp}">Tale of the tape</a>` : ""}</div>`; })() : ""}
+    <div class="stat-row">
+      <div><b>${streakTxt(p)}</b><small>Current streak</small></div>
+      <div><b>${p.rate}%</b><small>Win rate</small></div>
+      <div><b>${p.bouts.length}</b><small>Bouts on BFC cards</small></div>
+      <div><b>${p.titles}</b><small>Title fights</small></div>
+    </div>
+    ${tracked}
+    <div class="block"><h2>Last 5 fights</h2><div class="panel">${p.bouts.length ? `<ul class="opp-list">${p.bouts.slice(0, 5).map(b => `<li>${av(b.opp)}<span>${link(b.opp)}${resPill(b)}<br><span class="muted" style="font-size:.84rem">${esc(divLabel(b.div, b.bmf))} · ${b.rounds} rounds${b.title ? " · title fight" : ""}${b.m ? " · " + METHOD[b.m] + (b.rnd ? " R" + b.rnd : "") : ""}</span></span><a class="ev" href="#${b.ev}">${esc(EV[b.ev].name)} · ${fmtDate(b.date)}</a></li>`).join("")}</ul>` : `<p class="empty">Not booked on a posted card yet.</p>`}</div></div>
+    ${p.bouts.length > 5 ? `<div class="block"><h2>All BFC bouts</h2><div class="panel scroll"><table class="hist">
+      <thead><tr><th>Result</th><th>Opponent</th><th>Division</th><th>Method</th><th>Spot</th><th>Event</th><th>Date</th></tr></thead>
+      <tbody>${p.bouts.map(b => `<tr><td>${b.res ? `<span class="res-${b.res === "W" ? "W" : "L"}">${b.res}</span>` : '<span class="muted">–</span>'}</td><td>${link(b.opp)}${b.title ? ` <span class="tag title" style="margin:0 0 0 6px">Title</span>` : ""}</td><td>${esc(divLabel(b.div, b.bmf))}</td><td>${b.m ? METHOD[b.m] + (b.rnd ? " R" + b.rnd : "") : '<span class="muted">–</span>'}</td><td class="muted">${esc(b.sec)}</td><td><a href="#${b.ev}">${esc(EV[b.ev].name)}</a></td><td class="muted">${fmtDate(b.date)}</td></tr>`).join("")}</tbody></table></div></div>` : ""}
+    <div style="margin-top:20px"><a class="btn" href="#tape" data-tape-a="${id}">Compare in Tale of the tape</a></div>`;
+}
+
+/* ================= TALE OF THE TAPE ================= */
+function meetings(a, b) {
+  const out = [];
+  for (const e of posted) for (const x of e.bouts) if ((x[1] === a && x[2] === b) || (x[1] === b && x[2] === a)) out.push({ e, x, r: RES[`${e.id}|${x[1]}|${x[2]}`] });
+  return out;
+}
+function favour(A, Bp) {
+  const score = p => {
+    const formScore = p.form.length ? p.form.filter(r => r === "W").length / p.form.length : p.rate / 100;
+    const rk = rankOf(p).n, rankScore = rk === 0 ? 1 : rk < 99 ? Math.max(0.2, 1 - rk * 0.06) : 0.25;
+    const exp = Math.min(1, p.total / 15);
+    return 0.45 * (p.rate / 100) + 0.25 * formScore + 0.2 * rankScore + 0.1 * exp;
+  };
+  const a = score(A), b = score(Bp);
+  return Math.round(a / (a + b || 1) * 100);
+}
+function renderTape() {
+  const a = document.getElementById("t-a").value, b = document.getElementById("t-b").value, A = PL[a], Bp = PL[b];
+  const num = (k, l, r, lv, rv, lowerBetter) => ({ k, l, r, lv: lowerBetter ? -lv : lv, rv: lowerBetter ? -rv : rv });
+  const txt = (k, l, r) => ({ k, l, r, lv: null, rv: null });
+  const rA = rankOf(A), rB = rankOf(Bp), pA = p4pOf(A), pB = p4pOf(Bp);
+  const sections = [
+    ["Record", [
+      num("Record", rec(A), rec(Bp), A.w - A.l, Bp.w - Bp.l),
+      num("Wins", A.w, Bp.w, A.w, Bp.w),
+      num("Losses", A.l, Bp.l, A.l, Bp.l, true),
+      num("Win rate", A.rate + "%", Bp.rate + "%", A.rate, Bp.rate),
+      num("Total fights", A.total, Bp.total, A.total, Bp.total),
+    ]],
+    ["Form", [
+      txt("Last 5", A.form.length ? A.form.join(" ") : "–", Bp.form.length ? Bp.form.join(" ") : "–"),
+      num("Streak", streakTxt(A), streakTxt(Bp), A.streak ? (A.streak.t === "W" ? 1 : -1) * A.streak.n : 0, Bp.streak ? (Bp.streak.t === "W" ? 1 : -1) * Bp.streak.n : 0),
+      txt("Last win", A.lastWin ? EV[A.lastWin.ev].name : "–", Bp.lastWin ? EV[Bp.lastWin.ev].name : "–"),
+      txt("Last fight", A.lastFight ? daysAgo(A.lastFight.date) : "–", Bp.lastFight ? daysAgo(Bp.lastFight.date) : "–"),
+    ]],
+    ["How they win", [
+      num("KO/TKO wins", A.t.ko, Bp.t.ko, A.t.ko, Bp.t.ko),
+      num("Submission wins", A.t.sub, Bp.t.sub, A.t.sub, Bp.t.sub),
+      num("Decision wins", A.t.dec, Bp.t.dec, A.t.dec, Bp.t.dec),
+      num("Finish rate", A.finishRate === null ? "–" : A.finishRate + "%", Bp.finishRate === null ? "–" : Bp.finishRate + "%", A.finishRate || 0, Bp.finishRate || 0),
+      num("Times finished", A.t.lko + A.t.lsub, Bp.t.lko + Bp.t.lsub, A.t.lko + A.t.lsub, Bp.t.lko + Bp.t.lsub, true),
+    ]],
+    ["Rank and experience", [
+      num("Ranking", rA.txt, rB.txt, rA.n, rB.n, true),
+      num("Pound for pound", pA ? "#" + pA : "–", pB ? "#" + pB : "–", pA || 99, pB || 99, true),
+      num("Title fights", A.titles, Bp.titles, A.titles, Bp.titles),
+      num("Title fight wins", A.titleWins, Bp.titleWins, A.titleWins, Bp.titleWins),
+      num("Main events", A.main, Bp.main, A.main, Bp.main),
+      num("5-round fights", A.five, Bp.five, A.five, Bp.five),
+      num("BFC card bouts", A.bouts.length, Bp.bouts.length, A.bouts.length, Bp.bouts.length),
+      num("Awards (FOTN, KOTN, POTN)", A.bonTotal, Bp.bonTotal, A.bonTotal, Bp.bonTotal),
+    ]],
+    ["Profile", [
+      txt("Divisions", A.divs.join(", "), Bp.divs.join(", ")),
+      txt("Team", A.teams.join(", ") || "–", Bp.teams.join(", ") || "–"),
+      txt("Fighters", A.fighters.join(", ") || "–", Bp.fighters.join(", ") || "–"),
+    ]],
+  ];
+  const rowHtml = ({ k, l, r, lv, rv }) => { const lb = lv !== null && lv > rv, rb = rv !== null && rv > lv, same = lv === rv;
+    return `<div class="tape-row"><div class="l ${lb ? "best" : lv !== null && !same ? "dim" : ""}">${esc(l)}</div><div class="k">${k}</div><div class="r ${rb ? "best" : rv !== null && !same ? "dim" : ""}">${esc(r)}</div></div>`; };
+
+  // common opponents
+  const oppMap = p => { const m = {}; for (const x of p.bouts) if (x.opp && x.opp !== a && x.opp !== b) (m[x.opp] = m[x.opp] || []).push(x); return m; };
+  const oa = oppMap(A), ob = oppMap(Bp);
+  const common = Object.keys(oa).filter(k => ob[k]);
+  const resList = list => list.map(x => x.res ? `<span class="res-pill ${x.res}">${x.res}</span>` : `<span class="muted" style="font-size:.8rem">${esc(EV[x.ev].name.replace("BFC ", ""))}</span>`).join(" ");
+  const met = meetings(a, b);
+  const fa = favour(A, Bp);
+  document.getElementById("tape").innerHTML = `
+    <div class="tape-heads"><div>${av(a, "red")}<div><div class="nm">${esc(A.name)}</div><div class="muted">${esc(rec(A))} · ${esc(rA.txt)}</div></div></div>
+    <div>${av(b, "blue")}<div><div class="nm">${esc(Bp.name)}</div><div class="muted">${esc(rec(Bp))} · ${esc(rB.txt)}</div></div></div></div>
+    <div class="fav"><div class="lbl"><span><b>${fa}%</b> ${esc(A.name)}</span><span>${esc(Bp.name)} <b>${100 - fa}%</b></span></div>
+      <div class="track" role="img" aria-label="${fa}% to ${100 - fa}%"><i style="width:${fa}%"></i><i style="width:${100 - fa}%"></i></div>
+      <small>Who the numbers favour, from win rate, recent form, ranking and experience. Just for fun.</small></div>
+    ${sections.map(([title, rows]) => `<div class="tape-sec">${title}</div>${rows.map(rowHtml).join("")}`).join("")}
+    <div class="tape-sec">Common opponents</div>
+    <div class="common">${common.length ? common.slice(0, 12).map(k => `<div class="row"><div class="l">${resList(oa[k])}</div><div class="k">${link(k)}</div><div class="r">${resList(ob[k])}</div></div>`).join("") : `<p class="empty" style="text-align:center">No common opponents on BFC cards.</p>`}</div>
+    <div class="h2h"><strong style="color:var(--ink)">Head to head:</strong> ${met.length ? met.map(({ e, x, r }) => `<a href="#${e.id}">${esc(e.name)}</a>${r ? ` (${r.o === "draw" ? "draw" : r.o === "nc" ? "no contest" : esc(nameOf(r.o === "red" ? x[1] : x[2])) + " by " + (METHOD[r.m] || "") + (r.r ? " R" + r.r : "")})` : ""}`).join(", ") : "never booked against each other on a BFC card."}</div>`;
+}
+
+/* ================= CHAMPIONS ================= */
+function renderChampions() {
+  document.getElementById("champs").innerHTML = DIVISIONS.map(d => {
+    const c = champOf(d);
+    if (!c) return `<div class="panel champ"><div class="wc">${d}</div><div class="nm muted">Vacant</div><div class="meta">Title up for grabs</div></div>`;
+    const tf = c.bouts.filter(b => b.title && b.div === d), tw = tf.filter(b => b.res === "W").length;
+    return `<div class="panel champ"><div class="wc">${d}</div><div class="who">${av(c.id, "red")}<div><a class="nm" href="#${pid(c.id)}">${esc(c.name)}</a><div class="meta mono">${rec(c)}</div></div></div>
+      <div class="meta">${tf.length} ${d.toLowerCase()} title fight${tf.length === 1 ? "" : "s"} on BFC cards${tw ? ` · ${tw} won` : ""}</div></div>`;
+  }).join("");
+  document.getElementById("formers").innerHTML = B.players.filter(p => p.former).map(p => `<a href="#${pid(p.id)}">${av(p.id)}${esc(p.name)}</a>`).join("") || `<span class="muted">None yet.</span>`;
+  document.getElementById("title-fights").innerHTML = [...DIVISIONS, "BMF"].map(d => {
+    const list = [];
+    for (const e of posted) for (const b of e.bouts) if (b[5] && (b[3] === d || (d === "BMF" && b[6] && !b[3]))) list.push([e, b, RES[`${e.id}|${b[1]}|${b[2]}`]]);
+    if (!list.length) return "";
+    return `<div class="panel lineage"><div class="lh">${d}</div><ol class="title-list">${list.map(([e, b, r]) => {
+      const w = r && (r.o === "red" || r.o === "blue") ? (r.o === "red" ? b[1] : b[2]) : null;
+      return `<li><span>${w ? `${link(w)} <span class="muted">def.</span> ${link(w === b[1] ? b[2] : b[1])}` : `${link(b[1])} <span class="muted">vs</span> ${link(b[2])}`}</span><a class="reign" href="#${e.id}" style="text-decoration:none">${esc(e.name)} · ${fmtDate(e.date)}</a></li>`; }).join("")}</ol></div>`;
+  }).join("");
+}
+
+/* ================= RECORDS ================= */
+function rivalries() {
+  const m = {};
+  for (const e of B.events) for (const b of e.bouts) { if (!b[1] || !b[2]) continue; const k = [b[1], b[2]].sort().join("|"); (m[k] = m[k] || []).push({ e, b }); }
+  return Object.entries(m).filter(([, es]) => es.length > 1).map(([k, es]) => {
+    const [a, b] = k.split("|"); let wa = 0, wb = 0;
+    for (const { e, b: x } of es) { const r = RES[`${e.id}|${x[1]}|${x[2]}`]; if (r && (r.o === "red" || r.o === "blue")) { (r.o === "red" ? x[1] : x[2]) === a ? wa++ : wb++; } }
+    return { a, b, es: es.map(x => x.e), wa, wb };
+  }).sort((x, y) => y.es.length - x.es.length);
+}
+function renderRecords() {
+  const all = B.players;
+  const best = (fn, filter = () => true) => { const pool = all.filter(filter); const v = Math.max(0, ...pool.map(fn)); return { v, who: pool.filter(p => fn(p) === v && v > 0).map(p => p.id) }; };
+  const longest = p => { let bst = 0, c = 0; for (const x of p.bouts.slice().reverse()) { if (x.res === "W") { c++; bst = Math.max(bst, c); } else if (x.res === "L") c = 0; } return bst; };
+  const tiles = [
+    ["Most wins", best(p => p.w)],
+    ["Most fights", best(p => p.total)],
+    ["Best win rate (10+ fights)", (r => ({ v: r.v + "%", who: r.who }))(best(p => p.rate, p => p.total >= 10))],
+    ["Longest win streak (recorded)", best(longest)],
+    ["Most bouts on BFC cards", best(p => p.bouts.length)],
+    ["Most main events", best(p => p.main)],
+    ["Most title fights", best(p => p.titles)],
+    ["Most title fight wins", best(p => p.titleWins)],
+    ["Most KO/TKO wins", best(p => p.t.ko)],
+    ["Most submission wins", best(p => p.t.sub)],
+    ...AWARDS.filter(([k]) => k !== "SOTN" || B.bonuses.some(b => b.kind === "SOTN")).map(([k, label]) => ["Most " + label, best(p => p.bon[k] || 0)]),
+  ];
+  document.getElementById("rec-grid").innerHTML = tiles.map(([k, r]) => `<div class="panel rec-tile"><div class="k">${k}</div><b>${r.v}</b><div class="who">${r.who.length ? r.who.slice(0, 4).map(link).join(", ") + (r.who.length > 4 ? ` <span class="muted">+${r.who.length - 4} more</span>` : "") : '<span class="muted">No one yet</span>'}</div></div>`).join("");
+  const rv = rivalries().slice(0, 15);
+  document.getElementById("rivals").innerHTML = rv.length ? rv.map(r => `<div class="rival"><span class="a">${link(r.a)}</span><span class="sc num">${r.wa || r.wb ? `${r.wa} – ${r.wb}` : r.es.length + "×"}</span><span>${link(r.b)}</span><span class="n">${r.es.length} bouts: ${esc(r.es.map(e => e.name.replace("BFC ", "")).join(", "))}</span></div>`).join("") : `<p class="empty">No rematches yet.</p>`;
+}
+
+/* ================= TEAMS / NEWS / STAFF ================= */
+function renderTeams() {
+  const teams = {};
+  for (const p of B.players) for (const t of p.teams) (teams[t] = teams[t] || []).push(p);
+  document.getElementById("teams").innerHTML = Object.entries(teams).sort((a, b) => b[1].length - a[1].length).map(([t, ms]) => {
+    const w = ms.reduce((s, p) => s + p.w, 0), l = ms.reduce((s, p) => s + p.l, 0), ch = ms.filter(p => p.champDiv).length;
+    return `<div class="panel team"><div class="panel-h"><h3>${esc(t)}</h3><span class="mono muted">${ms.length} members · ${w}-${l}${ch ? ` · ${ch} champ${ch > 1 ? "s" : ""}` : ""}</span></div><div class="members">${ms.sort(byRecord).map(p => `<a href="#${pid(p.id)}">${av(p.id)}${esc(p.name)}</a>`).join("")}</div></div>`;
+  }).join("") || `<p class="muted">No team roles found.</p>`;
+}
+function renderNews() {
+  const items = [];
+  for (const e of posted) {
+    const m = e.bouts[0], co = e.bouts.find(b => b[0] === "Co-Main Event"), t = e.bouts.filter(b => b[5]).length;
+    const done = e.bouts.filter(b => RES[`${e.id}|${b[1]}|${b[2]}`]);
+    if (done.length) {
+      const r = RES[`${e.id}|${m[1]}|${m[2]}`];
+      items.push({ date: e.date, kind: "Results", html: `<h3><a href="#${e.id}" style="text-decoration:none">${esc(e.name)} results</a></h3><p>${r && (r.o === "red" || r.o === "blue") ? `${esc(nameOf(r.o === "red" ? m[1] : m[2]))} beat ${esc(nameOf(r.o === "red" ? m[2] : m[1]))} by ${METHOD[r.m] || ""}${r.r ? " in round " + r.r : ""} in the main event. ` : ""}${done.length} of ${e.bouts.length} results recorded.</p>` });
+    }
+    const bs = bonusesFor(e.id);
+    if (bs.length) items.push({ date: e.date, kind: "Award", html: `<h3><a href="#${e.id}" style="text-decoration:none">${esc(e.name)} awards</a></h3><p>${AWARDS.filter(([k]) => bs.some(b => b.kind === k)).map(([k, label]) => `${label}: ${bs.filter(b => b.kind === k).map(b => esc(nameOf(b.id))).join(k === "FOTN" ? " vs " : ", ")}`).join(". ")}.</p>` });
+    items.push({ date: e.date, kind: e.series, html: `<h3><a href="#${e.id}" style="text-decoration:none">${esc(e.name)} card${e.loc && !e.name.toUpperCase().includes(e.loc.toUpperCase()) ? " in " + esc(e.loc) : ""}</a></h3>
+      <p>Main event: ${esc(nameOf(m[1]))} vs ${esc(nameOf(m[2]))}, ${m[4]} rounds ${esc(divLabel(m[3], m[6]).toLowerCase())}${m[5] ? " for the title" : ""}.${co ? ` Co-main: ${esc(nameOf(co[1]))} vs ${esc(nameOf(co[2]))}.` : ""} ${e.bouts.length} bouts${t ? `, ${t} title fight${t > 1 ? "s" : ""}` : ""}.</p>` });
+  }
+  for (const f of B.fotm) if (PL[f.id]) items.push({ date: f.month + "-01", kind: "Award", html: `<h3><a href="#${pid(f.id)}" style="text-decoration:none">${esc(PL[f.id].name)} is the Fighter of the Month</a></h3><p>${esc(monthName(f.month))}${f.note ? ": " + esc(f.note) : ""}</p>` });
+  items.sort((a, b) => b.date.localeCompare(a.date));
+  document.getElementById("news-list").innerHTML = items.map(n => `<article class="panel news"><div class="top"><span class="kind ${n.kind === "BFC" || n.kind === "Award" ? "Title" : "Event"}">${esc(n.kind)}</span><span>${fmtDate(n.date)}</span></div>${n.html}</article>`).join("");
+}
+function renderStaff() {
+  const card = p => `<a class="panel staff ${p.staff === "Admin" ? "adm" : "own"}" href="#${pid(p.id)}" style="text-decoration:none">${av(p.id, p.staff === "Admin" ? "blue" : "red")}<div><div class="n">${esc(p.staffName)}</div><div class="r">${esc(p.staff)}</div><div class="muted" style="font-size:.82rem">${esc(p.name)}</div></div></a>`;
+  const order = { "Owner": 0, "Co-Owner": 1 };
+  document.getElementById("owners").innerHTML = B.players.filter(p => p.staff && p.staff !== "Admin").sort((a, b) => order[a.staff] - order[b.staff]).map(card).join("");
+  document.getElementById("admins").innerHTML = B.players.filter(p => p.staff === "Admin").map(card).join("");
+}
+
+/* ================= ROUTER ================= */
+function route(keepScroll) {
+  const h = location.hash.slice(1) || "home";
+  let view = h, nav = h;
+  if (EV[h]) { view = "event"; nav = "events"; renderEvent(h); }
+  else if (h.startsWith("p-") && PL[h.slice(2)]) { view = "profile"; nav = "fighters"; renderProfile(h.slice(2)); }
+  else if (!document.getElementById("v-" + h)) { view = "home"; nav = "home"; }
+  if (view === "tape") renderTape();
+  document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === "v-" + view));
+  document.querySelectorAll("nav.links a").forEach(a => a.classList.toggle("on", a.dataset.v === nav));
+  document.getElementById("nav").classList.remove("open");
+  document.getElementById("menu-btn").setAttribute("aria-expanded", "false");
+  if (!keepScroll) window.scrollTo(0, 0);
+  tick();
+}
+function renderAll() {
+  const ta = document.getElementById("t-a"), tb = document.getElementById("t-b"), keepA = ta.value, keepB = tb.value;
+  const names = B.players.slice().sort((a, b) => a.name.localeCompare(b.name));
+  for (const el of [ta, tb]) el.innerHTML = names.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join("");
+  const mb = latest.bouts[0];
+  ta.value = PL[keepA] ? keepA : (PL[mb[1]] ? mb[1] : names[0].id);
+  tb.value = PL[keepB] ? keepB : (PL[mb[2]] ? mb[2] : names[1].id);
+  document.getElementById("exp-date").textContent = new Date(B.exported).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  renderHome(); renderEvents(); renderRankings(); renderFighters(); renderChampions(); renderRecords(); renderTeams(); renderNews(); renderStaff();
+}
+
+function setup() {
+  DIVISIONS.forEach(d => document.getElementById("f-div").insertAdjacentHTML("beforeend", `<option>${d}</option>`));
+  ["f-search", "f-div", "f-sort"].forEach(id => document.getElementById(id)[id === "f-search" ? "oninput" : "onchange"] = renderFighters);
+  document.getElementById("t-a").onchange = renderTape;
+  document.getElementById("t-b").onchange = renderTape;
+  document.getElementById("menu-btn").onclick = () => { const n = document.getElementById("nav"), o = n.classList.toggle("open"); document.getElementById("menu-btn").setAttribute("aria-expanded", String(o)); };
+  document.addEventListener("click", e => {
+    const t = e.target.closest("[data-tape-a]");
+    if (t) { document.getElementById("t-a").value = t.dataset.tapeA; if (t.dataset.tapeB) document.getElementById("t-b").value = t.dataset.tapeB; if (location.hash === "#tape") renderTape(); }
+    const j = e.target.closest("[data-jump]");
+    if (j) { e.preventDefault(); document.getElementById(j.dataset.jump).scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
+  });
+  window.addEventListener("hashchange", () => route());
+  setInterval(tick, 1000);
+}
+
+async function fetchData() {
+  const res = await fetch("data.json?t=" + Date.now(), { cache: "no-store" });
+  if (!res.ok) throw new Error("HTTP " + res.status);
+  return res.json();
+}
+(async function start() {
+  setup();
+  let data = window.BFC;
+  const live = !data;
+  if (live) {
+    try { data = await fetchData(); }
+    catch (err) { document.querySelector("main").innerHTML = `<div class="wrap"><div class="panel" style="padding:24px;margin-top:40px"><h2>Data is not available yet</h2><p class="muted">The bot has not uploaded data.json yet. Run /syncsite in the staff channel, then reload this page.</p></div></div>`; return; }
+  }
+  prepare(data); renderAll(); route();
+  if (live) setInterval(async () => {
+    try { const d = await fetchData(); if (d.exported !== B.exported) { prepare(d); renderAll(); route(true); } } catch (e) { /* keep showing the last data */ }
+  }, 60000);
+})();
+</script>
+</body>
+</html>
